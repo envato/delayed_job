@@ -21,12 +21,6 @@ end
 
 module Psych
   module Visitors
-    class YAMLTree
-      def visit_Class(klass)
-        @emitter.scalar klass.name, nil, '!ruby/class', false, false, Nodes::Scalar::SINGLE_QUOTED
-      end
-    end
-
     class ToRuby
       def visit_Psych_Nodes_Scalar(o)
         @st[o.anchor] = o.value if o.anchor
