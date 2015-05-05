@@ -14,7 +14,7 @@ end
 group :test do
   gem 'activerecord', '~> 3.0'
   gem 'actionmailer', '~> 3.0'
-  gem 'rspec', '>= 2.11'
+  gem 'rspec', '>= 2.11', '< 2.99'
   gem 'simplecov'
 end
 
