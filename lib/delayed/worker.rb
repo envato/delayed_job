@@ -207,7 +207,7 @@ module Delayed
       return true  # did work
     rescue DeserializationError => error
       job.last_error = "#{error.message}\n#{error.backtrace.join("\n")}"
-      failed(job)
+      failed(job, error)
     rescue Exception => error
       self.class.lifecycle.run_callbacks(:error, self, job){ handle_failed_job(job, error) }
       return false  # work failed
@@ -215,7 +215,7 @@ module Delayed
 
     # Reschedule the job in the future (when a job fails).
     # Uses an exponential scale depending on the number of failed attempts.
-    def reschedule(job, time = nil)
+    def reschedule(job, error, time = nil)
       if (job.attempts += 1) < max_attempts(job)
         time ||= job.reschedule_at
         job.run_at = time
@@ -223,13 +223,13 @@ module Delayed
         job.save!
       else
         say "PERMANENTLY removing #{job.name} because of #{job.attempts} consecutive failures.", Logger::INFO
-        failed(job)
+        failed(job, error)
       end
     end
 
-    def failed(job)
+    def failed(job, error)
       self.class.lifecycle.run_callbacks(:failure, self, job) do
-        job.hook(:failure)
+        job.hook(:failure, error)
         self.class.destroy_failed_jobs ? job.destroy : job.fail!
       end
     end
@@ -249,7 +249,7 @@ module Delayed
     def handle_failed_job(job, error)
       job.last_error = "#{error.message}\n#{error.backtrace.join("\n")}"
       say "#{job.name} failed with #{error.class.name}: #{error.message} - #{job.attempts} failed attempts", Logger::ERROR
-      reschedule(job)
+      reschedule(job, error)
     end
 
     # Run the next job we can get an exclusive lock on.

@@ -154,6 +154,16 @@ shared_examples_for "a delayed_job backend" do
       expect(CallbackJob.messages).to eq(["enqueue", "before", "error: RuntimeError", "after"])
     end
 
+    it "calls the failure hook with the error" do
+      job = described_class.enqueue(CallbackJob.new)
+      job.payload_object.should_receive(:perform).and_raise(RuntimeError.new("fail"))
+
+      Delayed::Worker.max_attempts = 1
+      worker.run(job)
+
+      expect(CallbackJob.messages).to eq(["enqueue", "before", "error: RuntimeError", "after", "failure: RuntimeError"])
+    end
+
     it "calls error when before raises an error" do
       job = described_class.enqueue(CallbackJob.new)
       job.payload_object.should_receive(:before).and_raise(RuntimeError.new("fail"))
@@ -524,7 +534,7 @@ shared_examples_for "a delayed_job backend" do
 
           it "runs that hook" do
             @job.payload_object.should_receive :failure
-            worker.reschedule(@job)
+            worker.reschedule(@job, RuntimeError.new("fail"))
           end
         end
 
@@ -547,7 +557,7 @@ shared_examples_for "a delayed_job backend" do
 
           it "does not try to run that hook" do
             expect {
-              Delayed::Worker.max_attempts.times { worker.reschedule(@job) }
+              Delayed::Worker.max_attempts.times { worker.reschedule(@job, RuntimeError.new("fail")) }
             }.not_to raise_exception(NoMethodError)
           end
         end
@@ -558,12 +568,12 @@ shared_examples_for "a delayed_job backend" do
 
         it "is destroyed if it failed more than Worker.max_attempts times" do
           @job.should_receive(:destroy)
-          Delayed::Worker.max_attempts.times { worker.reschedule(@job) }
+          Delayed::Worker.max_attempts.times { worker.reschedule(@job, RuntimeError.new("fail")) }
         end
 
         it "is not destroyed if failed fewer than Worker.max_attempts times" do
           @job.should_not_receive(:destroy)
-          (Delayed::Worker.max_attempts - 1).times { worker.reschedule(@job) }
+          (Delayed::Worker.max_attempts - 1).times { worker.reschedule(@job, RuntimeError.new("fail")) }
         end
       end
 
@@ -580,12 +590,12 @@ shared_examples_for "a delayed_job backend" do
 
         it "is failed if it failed more than Worker.max_attempts times" do
           expect(@job.reload).not_to be_failed
-          Delayed::Worker.max_attempts.times { worker.reschedule(@job) }
+          Delayed::Worker.max_attempts.times { worker.reschedule(@job, RuntimeError.new("fail")) }
           expect(@job.reload).to be_failed
         end
 
         it "is not failed if it failed fewer than Worker.max_attempts times" do
-          (Delayed::Worker.max_attempts - 1).times { worker.reschedule(@job) }
+          (Delayed::Worker.max_attempts - 1).times { worker.reschedule(@job, RuntimeError.new("fail")) }
           expect(@job.reload).not_to be_failed
         end
       end

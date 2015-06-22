@@ -63,8 +63,8 @@ class CallbackJob
     self.class.messages << "error: #{error.class}"
   end
 
-  def failure(job)
-    self.class.messages << 'failure'
+  def failure(job, error)
+    self.class.messages << "failure: #{error.class}"
   end
 end
 
