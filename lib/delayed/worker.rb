@@ -130,13 +130,23 @@ module Delayed
     end
 
     def start
+      Rails.logger.info do
+        "#{Time.now} [Delayed::Worker#start] Starting worker #{Process.pid} , raise_signal_exceptions: #{self.class.raise_signal_exceptions.inspect}"
+      end
+
       trap('TERM') do
+        Rails.logger.info do
+          "#{Time.now} [Delayed::Worker#start] #{Process.pid} TERM trap , raise_signal_exceptions: #{self.class.raise_signal_exceptions.inspect}"
+        end
         say 'Exiting...'
         stop
         raise SignalException.new('TERM') if self.class.raise_signal_exceptions
       end
 
       trap('INT') do
+        Rails.logger.info do
+          "#{Time.now} [Delayed::Worker#start] #{Process.pid} INT trap , raise_signal_exceptions: #{self.class.raise_signal_exceptions.inspect}"
+        end
         say 'Exiting...'
         stop
         raise SignalException.new('INT') if self.class.raise_signal_exceptions && self.class.raise_signal_exceptions != :term
@@ -166,6 +176,10 @@ module Delayed
           end
 
           break if stop?
+        end
+
+        Rails.logger.info do
+          "#{Time.now} [Delayed::Worker#start] Worker #{Process.pid} is stopping naturally. raise_signal_exceptions: #{self.class.raise_signal_exceptions.inspect}"
         end
       end
     end
